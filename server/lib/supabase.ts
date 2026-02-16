@@ -1,17 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 
-if (!process.env.SUPABASE_URL) {
-  throw new Error("SUPABASE_URL is required");
-}
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn(
+    "[Supabase] Not configured. Backend features will use mock data. " +
+      "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env to enable database features."
+  );
 }
 
 export const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  SUPABASE_URL || "https://placeholder.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY || "placeholder-key"
 );
+
+export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
 // Database types for RAKSHAK-AI
 export interface Event {

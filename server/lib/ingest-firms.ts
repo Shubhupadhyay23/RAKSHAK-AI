@@ -153,6 +153,12 @@ function getLocationName(lat: number, lon: number): string {
  */
 export async function ingestFIRMSData(): Promise<number> {
   try {
+    // Check if we have NASA FIRMS API key
+    if (!process.env.NASA_FIRMS_API_KEY) {
+      console.warn("[FIRMS] NASA_FIRMS_API_KEY not configured");
+      return 0;
+    }
+
     console.log("[FIRMS] Fetching NASA FIRMS data...");
     const csvData = await fetchFIRMSData();
 
@@ -231,10 +237,9 @@ export async function ingestFIRMSData(): Promise<number> {
   } catch (error) {
     console.error("[FIRMS] Ingestion failed:", error);
 
-    // Log error to system_logs table
-    await supabase
-      .from("system_logs")
-      .insert([
+    // Log error to system_logs table (if configured)
+    try {
+      await supabase.from("system_logs").insert([
         {
           level: "error",
           service: "ingestion",
@@ -244,13 +249,18 @@ export async function ingestFIRMSData(): Promise<number> {
           },
         },
       ]);
+    } catch (logError) {
+      console.error("[FIRMS] Could not log error:", logError);
+    }
 
     throw error;
   }
 }
 
-// Run if called directly
-if (require.main === module) {
+// Run if called directly from CLI
+const isMainModule =
+  process.argv[1] === new URL(import.meta.url).pathname;
+if (isMainModule) {
   ingestFIRMSData()
     .then((count) => {
       console.log(`[FIRMS] Ingestion complete: ${count} events processed`);

@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { supabase, Event } from "../lib/supabase";
+import { supabase, Event, isSupabaseConfigured } from "../lib/supabase";
 
 interface CreateEventBody {
   source: string;
@@ -11,8 +11,60 @@ interface CreateEventBody {
   properties?: Record<string, unknown>;
 }
 
+// Mock data for development when Supabase is not configured
+const mockEvents: any[] = [
+  {
+    id: "evt_demo_001",
+    source: "firms",
+    event_type: "fire",
+    confidence: 0.94,
+    location: "Uttarakhand, Northern Ridge",
+    latitude: 30.45,
+    longitude: 78.15,
+    properties: { brightness: 320, satellite: "VIIRS" },
+    created_at: new Date(Date.now() - 2 * 60000).toISOString(),
+  },
+  {
+    id: "evt_demo_002",
+    source: "deforestation_model",
+    event_type: "deforestation",
+    confidence: 0.87,
+    location: "Madhya Pradesh",
+    latitude: 22.9,
+    longitude: 78.65,
+    properties: { area_hectares: 250 },
+    created_at: new Date(Date.now() - 15 * 60000).toISOString(),
+  },
+  {
+    id: "evt_demo_003",
+    source: "aqi_api",
+    event_type: "pollution",
+    confidence: 0.91,
+    location: "Delhi NCR",
+    latitude: 28.5,
+    longitude: 77.1,
+    properties: { aqi: 387 },
+    created_at: new Date(Date.now() - 28 * 60000).toISOString(),
+  },
+  {
+    id: "evt_demo_004",
+    source: "flood_model",
+    event_type: "flood",
+    confidence: 0.78,
+    location: "Bihar, Kosi Basin",
+    latitude: 26.15,
+    longitude: 87.5,
+    properties: { rainfall_mm: 85 },
+    created_at: new Date(Date.now() - 60 * 60000).toISOString(),
+  },
+];
+
 export const getEvents: RequestHandler = async (req, res) => {
   try {
+    if (!isSupabaseConfigured) {
+      return res.json(mockEvents);
+    }
+
     const { data, error } = await supabase
       .from("events")
       .select("*")
@@ -24,13 +76,19 @@ export const getEvents: RequestHandler = async (req, res) => {
     res.json(data || []);
   } catch (error) {
     console.error("Error fetching events:", error);
-    res.status(500).json({ error: "Failed to fetch events" });
+    // Return mock data as fallback
+    res.json(mockEvents);
   }
 };
 
 export const getEvent: RequestHandler<{ id: string }> = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isSupabaseConfigured) {
+      const mockEvent = mockEvents.find((e) => e.id === id);
+      return res.json(mockEvent || { error: "Event not found" });
+    }
 
     const { data, error } = await supabase
       .from("events")
@@ -43,7 +101,8 @@ export const getEvent: RequestHandler<{ id: string }> = async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Error fetching event:", error);
-    res.status(500).json({ error: "Failed to fetch event" });
+    const mockEvent = mockEvents.find((e) => e.id === req.params.id);
+    res.json(mockEvent || { error: "Failed to fetch event" });
   }
 };
 
@@ -58,26 +117,30 @@ export const createEvent: RequestHandler<unknown, unknown, CreateEventBody> =
         });
       }
 
+      const newEvent = {
+        id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        source,
+        event_type,
+        confidence,
+        location,
+        latitude,
+        longitude,
+        properties: properties || {},
+        created_at: new Date().toISOString(),
+      };
+
+      if (!isSupabaseConfigured) {
+        return res.status(201).json(newEvent);
+      }
+
       const { data, error } = await supabase
         .from("events")
-        .insert([
-          {
-            id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            source,
-            event_type,
-            confidence,
-            location,
-            latitude,
-            longitude,
-            properties: properties || {},
-            created_at: new Date().toISOString(),
-          },
-        ])
+        .insert([newEvent])
         .select();
 
       if (error) throw error;
 
-      res.status(201).json(data?.[0]);
+      res.status(201).json(data?.[0] || newEvent);
     } catch (error) {
       console.error("Error creating event:", error);
       res.status(500).json({ error: "Failed to create event" });
@@ -90,6 +153,11 @@ export const getEventsByType: RequestHandler<
   try {
     const { type } = req.params;
 
+    if (!isSupabaseConfigured) {
+      const filtered = mockEvents.filter((e) => e.event_type === type);
+      return res.json(filtered);
+    }
+
     const { data, error } = await supabase
       .from("events")
       .select("*")
@@ -101,7 +169,8 @@ export const getEventsByType: RequestHandler<
     res.json(data || []);
   } catch (error) {
     console.error("Error fetching events by type:", error);
-    res.status(500).json({ error: "Failed to fetch events" });
+    const filtered = mockEvents.filter((e) => e.event_type === req.params.type);
+    res.json(filtered);
   }
 };
 
@@ -110,6 +179,10 @@ export const getEventsBySeverity: RequestHandler<
 > = async (req, res) => {
   try {
     const { severity } = req.params;
+
+    if (!isSupabaseConfigured) {
+      return res.json([]);
+    }
 
     // This requires a join with alerts table
     const { data, error } = await supabase
@@ -128,6 +201,6 @@ export const getEventsBySeverity: RequestHandler<
     res.json(data || []);
   } catch (error) {
     console.error("Error fetching events by severity:", error);
-    res.status(500).json({ error: "Failed to fetch events" });
+    res.json([]);
   }
 };

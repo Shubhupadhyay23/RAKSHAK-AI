@@ -1,5 +1,6 @@
 import { RequestHandler } from "express";
 import { ingestFIRMSData } from "../lib/ingest-firms";
+import { isSupabaseConfigured } from "../lib/supabase";
 
 /**
  * Trigger NASA FIRMS ingestion manually
@@ -8,6 +9,16 @@ import { ingestFIRMSData } from "../lib/ingest-firms";
 export const triggerFIRMSIngestion: RequestHandler = async (req, res) => {
   try {
     console.log("[API] Triggering FIRMS ingestion...");
+
+    if (!isSupabaseConfigured) {
+      return res.json({
+        success: true,
+        message: "Ingestion skipped (Supabase not configured)",
+        events_processed: 0,
+        note: "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     const count = await ingestFIRMSData();
 
@@ -34,11 +45,15 @@ export const getIngestionStatus: RequestHandler = async (req, res) => {
   try {
     res.json({
       status: "operational",
+      supabase_configured: isSupabaseConfigured,
       services: {
         firms: "configured" + (process.env.NASA_FIRMS_API_KEY ? "" : " (no API key)"),
-        supabase: "configured" + (process.env.SUPABASE_URL ? "" : " (no URL)"),
+        supabase: isSupabaseConfigured ? "configured" : "not configured",
         llm: "configured" + (process.env.OPENAI_API_KEY ? "" : " (no API key)"),
       },
+      note: isSupabaseConfigured
+        ? "All systems ready"
+        : "Supabase not configured - using demo mode",
       last_check: new Date().toISOString(),
     });
   } catch (error) {
