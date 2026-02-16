@@ -315,12 +315,12 @@ export default function AlertDetail() {
 
   const handleDispatch = () => {
     // Simulate dispatch action
-    alert("SMS alert sent to district officials and public in affected areas");
+    window.alert("SMS alert sent to district officials and public in affected areas");
   };
 
   const handleDownloadPDF = () => {
     // Simulate PDF download
-    alert("Downloading incident report PDF...");
+    window.alert("Downloading incident report PDF...");
   };
 
   return (

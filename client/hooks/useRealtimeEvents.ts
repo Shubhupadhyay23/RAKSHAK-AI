@@ -43,13 +43,17 @@ export function useRealtimeEvents(options: UseRealtimeEventsOptions = {}) {
               console.log("[Realtime] Disconnected from events");
               setIsSubscribed(false);
             } else if (status === "CHANNEL_ERROR") {
-              console.error("[Realtime] Channel error");
-              setError("Failed to subscribe to realtime updates");
+              console.warn(
+                "[Realtime] Channel error - Supabase may not be configured. Using demo mode."
+              );
+              // Don't set error state for channel errors - this is expected in demo mode
+              setIsSubscribed(false);
             }
           });
       } catch (err) {
-        console.error("[Realtime] Error subscribing:", err);
-        setError(String(err));
+        console.warn("[Realtime] Could not subscribe (Supabase not configured):", err);
+        // Don't set error state - gracefully degrade to demo mode
+        setIsSubscribed(false);
       }
     };
 
@@ -105,13 +109,17 @@ export function useRealtimeAlerts(options: UseRealtimeEventsOptions = {}) {
               console.log("[Realtime] Disconnected from alerts");
               setIsSubscribed(false);
             } else if (status === "CHANNEL_ERROR") {
-              console.error("[Realtime] Channel error");
-              setError("Failed to subscribe to realtime updates");
+              console.warn(
+                "[Realtime] Channel error - Supabase may not be configured. Using demo mode."
+              );
+              // Don't set error state - gracefully degrade to demo mode
+              setIsSubscribed(false);
             }
           });
       } catch (err) {
-        console.error("[Realtime] Error subscribing:", err);
-        setError(String(err));
+        console.warn("[Realtime] Could not subscribe to alerts:", err);
+        // Don't set error state - gracefully degrade to demo mode
+        setIsSubscribed(false);
       }
     };
 
