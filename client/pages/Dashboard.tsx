@@ -123,10 +123,22 @@ export default function Dashboard() {
 
   // Setup realtime subscriptions
   const { isSubscribed } = useRealtimeEvents({
-    onNewEvent: (newEvent) => {
-      console.log("[Dashboard] New event received:", newEvent);
+    onNewEvent: (newEvent: any) => {
+      console.log("[Dashboard] New event received via realtime:", newEvent);
+      // Convert database event to frontend format
+      const convertedEvent: Event = {
+        id: newEvent.id,
+        type: newEvent.event_type as any,
+        location: newEvent.location,
+        severity: determineSeverityFromConfidence(newEvent.confidence),
+        confidence: newEvent.confidence,
+        createdAt: formatDate(newEvent.created_at),
+        description: newEvent.properties?.description || `${newEvent.event_type} detected`,
+        lat: newEvent.latitude,
+        lng: newEvent.longitude,
+      };
       // Add new event to the top of the list
-      setEvents((prev) => [newEvent, ...prev]);
+      setEvents((prev) => [convertedEvent, ...prev]);
     },
   });
 
@@ -207,12 +219,16 @@ export default function Dashboard() {
               {isSubscribed ? (
                 <>
                   <Wifi className="w-4 h-4 text-green-600 animate-pulse" />
-                  <span className="text-green-600 font-medium">Live</span>
+                  <span className="text-green-600 font-medium" title="Realtime updates enabled">
+                    Live
+                  </span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-500">Demo Mode</span>
+                  <span className="text-slate-500" title="Demo mode - using mock data">
+                    Demo
+                  </span>
                 </>
               )}
             </div>
