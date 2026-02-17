@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useRealtimeEvents } from "@/hooks/useRealtimeEvents";
+import { api } from "@/lib/api";
 import {
   AlertCircle,
   Flame,
@@ -133,43 +134,10 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch("/api/events");
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            // Convert backend events to frontend format
-            const convertedEvents = data.map((e: any) => ({
-              id: e.id,
-              type: e.event_type as any,
-              location: e.location,
-              severity: determineSeverityFromConfidence(e.confidence),
-              confidence: e.confidence,
-              createdAt: formatDate(e.created_at),
-              description: e.properties?.description || `${e.event_type} detected`,
-              lat: e.latitude,
-              lng: e.longitude,
-            }));
-            setEvents(convertedEvents);
-          }
-        }
-      } catch (error) {
-        console.log("[Dashboard] Using mock data (backend not connected)");
-        // Keep using mock data if backend isn't available
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        const data = await api.getEvents();
 
-    fetchEvents();
-  }, []);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const response = await fetch("/api/events");
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.length > 0) {
+        if (data && Array.isArray(data) && data.length > 0) {
+          // Convert backend events to frontend format
           const convertedEvents = data.map((e: any) => ({
             id: e.id,
             type: e.event_type as any,
@@ -183,11 +151,36 @@ export default function Dashboard() {
           }));
           setEvents(convertedEvents);
         }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("[Dashboard] Refresh failed:", error);
+    };
+
+    fetchEvents();
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const data = await api.getEvents();
+
+      if (data && Array.isArray(data) && data.length > 0) {
+        const convertedEvents = data.map((e: any) => ({
+          id: e.id,
+          type: e.event_type as any,
+          location: e.location,
+          severity: determineSeverityFromConfidence(e.confidence),
+          confidence: e.confidence,
+          createdAt: formatDate(e.created_at),
+          description: e.properties?.description || `${e.event_type} detected`,
+          lat: e.latitude,
+          lng: e.longitude,
+        }));
+        setEvents(convertedEvents);
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 800);
     }
-    setTimeout(() => setIsRefreshing(false), 800);
   };
 
   const criticalCount = events.filter((e) => e.severity === "critical").length;

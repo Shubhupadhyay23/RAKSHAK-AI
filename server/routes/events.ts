@@ -71,12 +71,14 @@ export const getEvents: RequestHandler = async (req, res) => {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (error) throw error;
+    if (error) {
+      console.warn("[Events] Supabase fetch failed, using mock data");
+      return res.json(mockEvents);
+    }
 
-    res.json(data || []);
+    res.json(data || mockEvents);
   } catch (error) {
-    console.error("Error fetching events:", error);
-    // Return mock data as fallback
+    // Silently return mock data in demo mode
     res.json(mockEvents);
   }
 };
@@ -84,9 +86,9 @@ export const getEvents: RequestHandler = async (req, res) => {
 export const getEvent: RequestHandler<{ id: string }> = async (req, res) => {
   try {
     const { id } = req.params;
+    const mockEvent = mockEvents.find((e) => e.id === id);
 
     if (!isSupabaseConfigured) {
-      const mockEvent = mockEvents.find((e) => e.id === id);
       return res.json(mockEvent || { error: "Event not found" });
     }
 
@@ -96,13 +98,15 @@ export const getEvent: RequestHandler<{ id: string }> = async (req, res) => {
       .eq("id", id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      return res.json(mockEvent || { error: "Event not found" });
+    }
 
     res.json(data);
   } catch (error) {
-    console.error("Error fetching event:", error);
+    // Return mock data on error
     const mockEvent = mockEvents.find((e) => e.id === req.params.id);
-    res.json(mockEvent || { error: "Failed to fetch event" });
+    res.json(mockEvent || { error: "Event not found" });
   }
 };
 
@@ -152,9 +156,9 @@ export const getEventsByType: RequestHandler<
 > = async (req, res) => {
   try {
     const { type } = req.params;
+    const filtered = mockEvents.filter((e) => e.event_type === type);
 
     if (!isSupabaseConfigured) {
-      const filtered = mockEvents.filter((e) => e.event_type === type);
       return res.json(filtered);
     }
 
@@ -164,12 +168,12 @@ export const getEventsByType: RequestHandler<
       .eq("event_type", type)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      return res.json(filtered);
+    }
 
-    res.json(data || []);
+    res.json(data || filtered);
   } catch (error) {
-    console.error("Error fetching events by type:", error);
-    const filtered = mockEvents.filter((e) => e.event_type === req.params.type);
     res.json(filtered);
   }
 };
@@ -178,8 +182,6 @@ export const getEventsBySeverity: RequestHandler<
   { severity: string }
 > = async (req, res) => {
   try {
-    const { severity } = req.params;
-
     if (!isSupabaseConfigured) {
       return res.json([]);
     }
@@ -193,14 +195,15 @@ export const getEventsBySeverity: RequestHandler<
         alerts(severity)
       `
       )
-      .eq("alerts.severity", severity)
+      .eq("alerts.severity", req.params.severity)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      return res.json([]);
+    }
 
     res.json(data || []);
   } catch (error) {
-    console.error("Error fetching events by severity:", error);
     res.json([]);
   }
 };
