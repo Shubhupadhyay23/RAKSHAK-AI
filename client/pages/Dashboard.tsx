@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useRealtimeEvents } from "@/hooks/useRealtimeEvents";
+import { useHybridRealtime } from "@/hooks/useHybridRealtime";
 import { api } from "@/lib/api";
 import {
   AlertCircle,
@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Zap,
 } from "lucide-react";
 
 interface Event {
@@ -121,11 +122,17 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Setup realtime subscriptions
-  const { isSubscribed } = useRealtimeEvents({
+  // Setup hybrid realtime (demo or live depending on Supabase config)
+  const { isConnected, mode, isDemoMode, isLiveMode } = useHybridRealtime({
+    table: "events",
     onNewEvent: (newEvent: any) => {
-      console.log("[Dashboard] New event received via realtime:", newEvent);
-      // Convert database event to frontend format
+      console.log(
+        `[Dashboard] New ${mode} event received:`,
+        newEvent.event_type,
+        "at",
+        newEvent.location
+      );
+      // Convert database/simulator event to frontend format
       const convertedEvent: Event = {
         id: newEvent.id,
         type: newEvent.event_type as any,
@@ -133,7 +140,9 @@ export default function Dashboard() {
         severity: determineSeverityFromConfidence(newEvent.confidence),
         confidence: newEvent.confidence,
         createdAt: formatDate(newEvent.created_at),
-        description: newEvent.properties?.description || `${newEvent.event_type} detected`,
+        description:
+          newEvent.properties?.description ||
+          `${newEvent.event_type} detected`,
         lat: newEvent.latitude,
         lng: newEvent.longitude,
       };
@@ -216,18 +225,34 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             {/* Realtime Status */}
             <div className="flex items-center gap-2 text-sm">
-              {isSubscribed ? (
+              {isLiveMode && isConnected ? (
                 <>
                   <Wifi className="w-4 h-4 text-green-600 animate-pulse" />
-                  <span className="text-green-600 font-medium" title="Realtime updates enabled">
+                  <span
+                    className="text-green-600 font-medium"
+                    title="Connected to live Supabase"
+                  >
                     Live
+                  </span>
+                </>
+              ) : isDemoMode ? (
+                <>
+                  <Zap className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span
+                    className="text-amber-600 font-medium"
+                    title="Demo mode - simulated events every 8s"
+                  >
+                    Demo Live
                   </span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-500" title="Demo mode - using mock data">
-                    Demo
+                  <span
+                    className="text-slate-500"
+                    title="Connecting..."
+                  >
+                    Connecting...
                   </span>
                 </>
               )}
@@ -413,29 +438,46 @@ export default function Dashboard() {
             {/* System Status */}
             <Card className="border border-slate-200 shadow-sm">
               <div className="p-6 border-b border-slate-200">
-                <h3 className="font-semibold text-slate-900">System Status</h3>
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                  System Status
+                  {isConnected && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">
+                      {isLiveMode ? "Realtime" : "Simulated"}
+                    </span>
+                  )}
+                </h3>
               </div>
 
               <div className="p-4 space-y-4">
                 <StatusItem
+                  label="Realtime Mode"
+                  status={isConnected ? "active" : "inactive"}
+                  subtext={
+                    isLiveMode
+                      ? "Connected to Supabase"
+                      : isDemoMode
+                        ? "Using simulated events (every 8s)"
+                        : "Initializing..."
+                  }
+                />
+                <StatusItem
                   label="Satellite Data"
-                  status="active"
-                  subtext="FIRMS, Sentinel-2"
+                  status={isLiveMode ? "active" : "inactive"}
+                  subtext={
+                    isLiveMode ? "FIRMS, Sentinel-2" : "Demo mode"
+                  }
                 />
                 <StatusItem
                   label="Weather Data"
-                  status="active"
-                  subtext="OpenWeather API"
+                  status={isLiveMode ? "active" : "inactive"}
+                  subtext={
+                    isLiveMode ? "OpenWeather API" : "Demo mode"
+                  }
                 />
                 <StatusItem
                   label="AI Models"
                   status="active"
                   subtext="Fire, Deforestation"
-                />
-                <StatusItem
-                  label="Last Update"
-                  status="success"
-                  subtext="2 minutes ago"
                 />
               </div>
             </Card>
