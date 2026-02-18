@@ -441,7 +441,7 @@ export default function Dashboard() {
                   onClick={() => setMapFilter(mapFilter === "fire" ? null : "fire")}
                 >
                   <Flame className="w-4 h-4 mr-2" />
-                  View Fire Zones {events.filter((e) => e.type === "fire").length > 0 && `(${events.filter((e) => e.type === "fire").length})`}
+                  View Fire Zones {events.filter((e) => e.type === "fire").length > 0 ? `(${events.filter((e) => e.type === "fire").length})` : ""}
                 </Button>
                 <Button
                   variant="outline"
@@ -453,7 +453,7 @@ export default function Dashboard() {
                   onClick={() => setMapFilter(mapFilter === "pollution" ? null : "pollution")}
                 >
                   <Cloud className="w-4 h-4 mr-2" />
-                  Check Air Quality {events.filter((e) => e.type === "pollution").length > 0 && `(${events.filter((e) => e.type === "pollution").length})`}
+                  Check Air Quality {events.filter((e) => e.type === "pollution").length > 0 ? `(${events.filter((e) => e.type === "pollution").length})` : ""}
                 </Button>
                 <Button
                   variant="outline"
@@ -465,7 +465,7 @@ export default function Dashboard() {
                   onClick={() => setMapFilter(mapFilter === "flood" ? null : "flood")}
                 >
                   <Droplets className="w-4 h-4 mr-2" />
-                  Flood Forecast {events.filter((e) => e.type === "flood").length > 0 && `(${events.filter((e) => e.type === "flood").length})`}
+                  Flood Forecast {events.filter((e) => e.type === "flood").length > 0 ? `(${events.filter((e) => e.type === "flood").length})` : ""}
                 </Button>
               </div>
             </Card>
