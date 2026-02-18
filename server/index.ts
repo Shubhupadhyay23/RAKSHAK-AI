@@ -23,20 +23,20 @@ export function createServer() {
   // Demo route (for testing)
   app.get("/api/demo", handleDemo);
 
-  // Events routes
+  // Events routes (specific routes BEFORE generic parameter routes)
+  app.get("/api/events/type/:type", eventsRoutes.getEventsByType);
+  app.get("/api/events/severity/:severity", eventsRoutes.getEventsBySeverity);
   app.get("/api/events", eventsRoutes.getEvents);
   app.get("/api/events/:id", eventsRoutes.getEvent);
   app.post("/api/events", eventsRoutes.createEvent);
-  app.get("/api/events/type/:type", eventsRoutes.getEventsByType);
-  app.get("/api/events/severity/:severity", eventsRoutes.getEventsBySeverity);
 
-  // Alerts routes
-  app.get("/api/alerts", alertsRoutes.getAlerts);
-  app.get("/api/alerts/:id", alertsRoutes.getAlert);
+  // Alerts routes (specific nested routes BEFORE generic :id routes)
   app.post("/api/alerts/:id/generate", alertsRoutes.generateAction);
-  app.patch("/api/alerts/:id", alertsRoutes.updateAlert);
   app.post("/api/alerts/:id/acknowledge", alertsRoutes.acknowledgeAlert);
   app.post("/api/alerts/:id/resolve", alertsRoutes.resolveAlert);
+  app.get("/api/alerts", alertsRoutes.getAlerts);
+  app.get("/api/alerts/:id", alertsRoutes.getAlert);
+  app.patch("/api/alerts/:id", alertsRoutes.updateAlert);
 
   // Ingestion routes
   app.post("/api/ingestion/firms", ingestionRoutes.triggerFIRMSIngestion);
