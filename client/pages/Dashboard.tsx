@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { IndiaMap } from "@/components/IndiaMap";
 import { useHybridRealtime } from "@/hooks/useHybridRealtime";
 import { api } from "@/lib/api";
 import {
@@ -19,6 +20,7 @@ import {
   Wifi,
   WifiOff,
   Zap,
+  X,
 } from "lucide-react";
 
 interface Event {
@@ -121,6 +123,7 @@ export default function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapFilter, setMapFilter] = useState<"fire" | "deforestation" | "pollution" | "flood" | null>(null);
 
   // Setup hybrid realtime (demo or live depending on Supabase config)
   const { isConnected, mode, isDemoMode, isLiveMode } = useHybridRealtime({
@@ -312,39 +315,47 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-6">
             {/* Map */}
             <Card className="p-0 overflow-hidden border border-slate-200 shadow-sm">
-              <div className="w-full h-96 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center relative">
-                <div className="absolute inset-0 opacity-10">
-                  <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
-                    <defs>
-                      <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
-                      </pattern>
-                    </defs>
-                    <rect width="100" height="100" fill="url(#grid)" />
-                  </svg>
-                </div>
-                <div className="relative z-10 text-center">
-                  <MapPin className="w-12 h-12 text-white mx-auto mb-2 opacity-80" />
-                  <p className="text-white font-semibold">India Live Map</p>
-                  <p className="text-white/80 text-sm mt-1">
-                    Satellite + sensor data visualization
-                  </p>
-                </div>
-              </div>
+              <div className="relative">
+                <IndiaMap events={events} filter={mapFilter} />
 
-              {/* Map Legend */}
-              <div className="border-t border-slate-200 p-4 bg-white">
-                <p className="text-sm font-semibold text-slate-700 mb-3">Event Types</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {(["fire", "deforestation", "pollution", "flood"] as const).map((type) => {
-                    const Icon = eventIcons[type];
-                    return (
-                      <div key={type} className="flex items-center gap-2">
-                        <Icon className={`w-4 h-4 ${eventColors[type].text}`} />
-                        <span className="text-xs text-slate-600 capitalize">{type}</span>
-                      </div>
-                    );
-                  })}
+                {/* Map Legend & Filter Controls */}
+                <div className="border-t border-slate-200 p-4 bg-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-slate-700">Event Types</p>
+                    {mapFilter && (
+                      <button
+                        onClick={() => setMapFilter(null)}
+                        className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                      >
+                        Clear Filter <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {(["fire", "deforestation", "pollution", "flood"] as const).map((type) => {
+                      const Icon = eventIcons[type];
+                      const count = events.filter((e) => e.type === type).length;
+                      const isActive = mapFilter === type;
+
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => setMapFilter(isActive ? null : type)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                            isActive
+                              ? `${eventColors[type].bg} ${eventColors[type].border} border-2`
+                              : "hover:bg-slate-50 border-2 border-transparent"
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 ${eventColors[type].text}`} />
+                          <div className="text-left">
+                            <span className="text-xs text-slate-600 capitalize block font-medium">{type}</span>
+                            <span className="text-xs text-slate-500">{count} events</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -420,17 +431,41 @@ export default function Dashboard() {
                   <AlertCircle className="w-4 h-4 mr-2" />
                   Generate Alert Report
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className={`w-full transition-colors ${
+                    mapFilter === "fire"
+                      ? "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
+                      : "hover:bg-slate-50"
+                  }`}
+                  onClick={() => setMapFilter(mapFilter === "fire" ? null : "fire")}
+                >
                   <Flame className="w-4 h-4 mr-2" />
-                  View Fire Zones
+                  View Fire Zones {events.filter((e) => e.type === "fire").length > 0 && `(${events.filter((e) => e.type === "fire").length})`}
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className={`w-full transition-colors ${
+                    mapFilter === "pollution"
+                      ? "bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
+                      : "hover:bg-slate-50"
+                  }`}
+                  onClick={() => setMapFilter(mapFilter === "pollution" ? null : "pollution")}
+                >
                   <Cloud className="w-4 h-4 mr-2" />
-                  Check Air Quality
+                  Check Air Quality {events.filter((e) => e.type === "pollution").length > 0 && `(${events.filter((e) => e.type === "pollution").length})`}
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className={`w-full transition-colors ${
+                    mapFilter === "flood"
+                      ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                      : "hover:bg-slate-50"
+                  }`}
+                  onClick={() => setMapFilter(mapFilter === "flood" ? null : "flood")}
+                >
                   <Droplets className="w-4 h-4 mr-2" />
-                  Flood Forecast
+                  Flood Forecast {events.filter((e) => e.type === "flood").length > 0 && `(${events.filter((e) => e.type === "flood").length})`}
                 </Button>
               </div>
             </Card>
