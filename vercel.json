@@ -1,16 +1,5 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/spa",
-  "framework": "vite",
-  "env": {
-    "VITE_API_URL": "@vite_api_url"
-  },
-  "regions": ["iad1"],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  }
+  "framework": "vite"
 }
